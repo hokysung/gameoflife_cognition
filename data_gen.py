@@ -39,22 +39,29 @@ class GoL_Sup_Dataset:
                 # img = np.array(img)
                 # cv2.imshow("game", img)
                 # q = cv2.waitKey(100)
-                # if q == 113: # 'q'
+                # if q == 113:
                 #     cv2.destroyAllWindows()
                 #     break
                 self.data += board.view(board_dim,board_dim), newboard.view(board_dim,board_dim)
-                board = torch.tensor(newboard, dtype=torch.int64)
+                board = newboard
         # breakpoint()
         self.data = torch.stack(self.data).reshape(NUM_CONFIG * max_timestep, 2, board_dim, board_dim)
         
-        breakpoint()
         torch.save(self.data, 'train_data_sup.data')
+        self.data = self.data.float()
+        self.data.requires_grad = True
+
+        if split == 'Train':
+            self.data = self.data[:int(len(self.data)*0.8)]
+        elif split == 'Validation':
+            self.data = self.data[int(len(self.data)*0.8):int(len(self.data)*0.9)]
+        else:
+            self.data = self.data[int(len(self.data)*0.9):]
 
     def __len__(self):
         return self.data.shape[0]
 
     def __getitem__(self, index):
-        breakpoint()
         return self.data[index][0], self.data[index][1]
 
 # sup_dataset = GoL_Sup_Dataset()
@@ -79,10 +86,6 @@ def rle_decode(mask_rle, shape):
     for lo, hi in zip(starts, ends):
         img[lo:hi] = 1
     return img.reshape(shape)
-
-with open ("pattern1.rle", "r") as myfile:
-    data=myfile.readlines()
-    breakpoint()
 
 # BOARD_HEIGHT = 100
 # BOARD_WIDTH = 100

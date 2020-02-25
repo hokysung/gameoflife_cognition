@@ -11,18 +11,18 @@ import torch.nn.utils.rnn as rnn_utils
 
 
 class BaselineCNN(nn.Module):
-    def __init__(self, vocab_size, img_size=32, channels=1, embedding_dim=64, hidden_dim=256, n_filters=1):
+    def __init__(self, img_size=16, channels=1, kernel_size=3, n_filters=5):
         super(BaselineCNN, self).__init__()
-        self.hidden_dim = 256
         self.conv = nn.Sequential(
-            nn.Conv2d(channels, n_filters, 3, 3, padding=1),
-            nn.ReLU())
+                        nn.Conv2d(channels, n_filters, kernel_size, padding=1),
+                        nn.ReLU()
+                    )
 
-    def forward(self, image):
-        return self.conv(image)
+    def forward(self, pattern_input):
+        return self.conv(pattern_input.unsqueeze(1)).squeeze(1)
 
 class ConvPredictor(nn.Module):
-    def __init__(self, vocab_size, img_size=32, channels=3, embedding_dim=64, hidden_dim=256, n_filters=64):
+    def __init__(self, vocab_size, img_size=16, channels=3, embedding_dim=64, hidden_dim=256, n_filters=64):
         super(TextImageCompatibility, self).__init__()
         
 
