@@ -26,14 +26,14 @@ class GoL_Sup_Dataset:
 
         for _ in range(NUM_CONFIG):
             distrib = torch.distributions.Bernoulli(0.5)
-            weights = torch.tensor([[1,1,1],[1,10,1],[1,1,1]]).view(1,1,3,3)
+            weights = torch.tensor([[1,1,1],[1,10,1],[1,1,1]]).view(1,1,3,3).float()
             board = distrib.sample((board_dim, board_dim)).view(1,1,board_dim, board_dim)
-            board = board.to(torch.int64)
+            board = board.to(torch.float32)
             config_data = []
             for _ in range(max_timestep):
                 newboard = F.conv2d(board, weights, padding=1).view(1,1,board_dim,board_dim)
                 newboard = (newboard==12) | (newboard==3) | (newboard==13)
-                newboard = newboard.to(torch.int64)
+                newboard = newboard.to(torch.float32)
                 # newboard_array = np.int8(newboard) * 255
                 # img = Image.fromarray(newboard_array).convert('RGB')
                 # img = np.array(img)
