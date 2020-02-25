@@ -104,7 +104,6 @@ if __name__ == '__main__':
             # loss: mean-squared error
             loss = F.mse_loss(pred_next, next_pat)
 
-            # breakpoint()
             # train
             loss_meter.update(loss.item(), batch_size)
             optimizer.zero_grad()
@@ -134,7 +133,6 @@ if __name__ == '__main__':
                 # obtain predicted rgb
                 pred_next = model(curr_pat)
 
-                breakpoint()
                 # loss: mean-squared error
                 loss = F.mse_loss(pred_next, next_pat)
 
