@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.nn as nn
+import random
 
 #f=open("./all/4boats.rle", "r")
 
@@ -67,8 +68,10 @@ def boardmaker(filename):
     board = board.reshape(y,x)
     hor = 50 - x
     ver = 50 - y
+    left = int(random.random() * hor)
+    top = int(random.random() * ver)
     
-    pad = nn.ConstantPad2d((int(hor/2), hor -  int(hor/2), int(ver/2), ver-int(ver/2)), 0)
+    pad = nn.ConstantPad2d((left, hor -  left, top, ver-top), 0)
     
     board = pad(board)
 
