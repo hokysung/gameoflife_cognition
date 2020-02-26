@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 from data_gen import GoL_Sup_Dataset
 
 from utils import (AverageMeter, save_checkpoint)
-from models import BaselineCNN
+from models import (BaselineCNN, PatternEncoder, PatternDecoder)
 
 if __name__ == '__main__':
     # Parse arguments
@@ -25,10 +25,11 @@ if __name__ == '__main__':
     parser.add_argument('out_dir', type=str, help='where to save checkpoints')
     # parser.add_argument('sup_lvl', type=float, default = 1.0,
     #                     help='how much of the data to supervise [default: 1.0]')
+    parser.add_argument('mode', type=str, help='what kind of model to run?')
     parser.add_argument('--batch_size', type=int, default=10,
                         help='batch size [default=100]')
     parser.add_argument('--lr', type=float, default=0.001,
-                        help='learning rate [default=0.001]')
+                        help='learning rate [default=0.1]')
     parser.add_argument('--epochs', type=int, default=10,
                         help='number of training epochs [default: 50]')
     parser.add_argument('--seed', type=int, default=42)
@@ -48,7 +49,7 @@ if __name__ == '__main__':
     args.cuda = args.cuda and torch.cuda.is_available()
     device = torch.device('cuda' if args.cuda else 'cpu')
 
-    def train():
+    def train(mode='baseline'):
         # Define training dataset & build vocab
         train_dataset = GoL_Sup_Dataset(split='Train')
         train_loader = DataLoader(train_dataset, shuffle=True, batch_size=args.batch_size)
@@ -58,17 +59,29 @@ if __name__ == '__main__':
         test_dataset = GoL_Sup_Dataset(split='Validation')
         test_loader = DataLoader(test_dataset, shuffle=False, batch_size=args.batch_size)
 
-        # Define model
-        conv_pred = BaselineCNN()
-        optimizer = torch.optim.Adam(conv_pred.parameters(), lr=args.lr)
-        conv_pred.to(device)
+        # Define model & optimizer
+        if mode == 'baseline':
+            conv_pred = BaselineCNN()
+            optimizer = torch.optim.Adam(conv_pred.parameters(), lr=args.lr)
+            conv_pred.to(device)
+            models = [conv_pred]
+        elif mode == 'autoencoder':
+            pattern_enc = PatternEncoder()
+            pattern_dec = PatternDecoder()
+            optimizer = torch.optim.Adam(
+                chain(
+                pattern_enc.parameters(),
+                pattern_dec.parameters(),
+            ), lr=args.lr)
+            # models = [pattern_enc]
+            models = [pattern_enc, pattern_dec]
         
         best_loss = float('inf')
         track_loss = np.zeros((args.epochs, 2))
 
         for epoch in range(1, args.epochs + 1):
-            train_loss = train_one_epoch(epoch, conv_pred, optimizer, train_loader)
-            test_loss = test_one_epoch(epoch, conv_pred, test_loader)
+            train_loss = train_one_epoch(epoch, models, optimizer, train_loader)
+            test_loss = test_one_epoch(epoch, models, test_loader)
 
             is_best = test_loss < best_loss
             best_loss = min(test_loss, best_loss)
@@ -77,7 +90,7 @@ if __name__ == '__main__':
             
             save_checkpoint({
                 'epoch': epoch,
-                'conv_pred': conv_pred.state_dict(),
+                'models': [model.state_dict() for model in models],
                 'optimizer': optimizer.state_dict(),
                 'track_loss': track_loss,
                 'cmd_line_args': args,
@@ -87,8 +100,9 @@ if __name__ == '__main__':
                 'loss.npy'), track_loss)
 
 
-    def train_one_epoch(epoch, model, optimizer, train_loader):
-        model.train()
+    def train_one_epoch(epoch, models, optimizer, train_loader):
+        for model in models:
+            model.train()
 
         loss_meter = AverageMeter()
         pbar = tqdm(total=len(train_loader))
@@ -98,12 +112,20 @@ if __name__ == '__main__':
             curr_pat = curr_pat.float()
             next_pat = next_pat.float()
 
-            # obtain predicted rgb
-            pred_next = model(curr_pat)
+            # breakpoint()
 
+            # obtain predicted pattern
+            out = curr_pat
+            for model in models:
+                out = model(out)
+                # breakpoint()
+            pred_next = out
+
+            # breakpoint()
             # loss: mean-squared error
             loss = F.mse_loss(pred_next, next_pat)
 
+            # breakpoint()
             # train
             loss_meter.update(loss.item(), batch_size)
             optimizer.zero_grad()
@@ -120,8 +142,9 @@ if __name__ == '__main__':
         return loss_meter.avg
 
 
-    def test_one_epoch(epoch, model, test_loader):
-        model.eval()
+    def test_one_epoch(epoch, models, test_loader):
+        for model in models:
+            model.eval()
 
         with torch.no_grad():
             loss_meter = AverageMeter()
@@ -130,8 +153,11 @@ if __name__ == '__main__':
             for batch_idx, (curr_pat, next_pat) in enumerate(test_loader):
                 batch_size = curr_pat.size(0) 
 
-                # obtain predicted rgb
-                pred_next = model(curr_pat)
+                # obtain predicted pattern
+                out = curr_pat
+                for model in models:
+                    out = model(out)
+                pred_next = out
 
                 # loss: mean-squared error
                 loss = F.mse_loss(pred_next, next_pat)
@@ -145,4 +171,4 @@ if __name__ == '__main__':
                 print('====> Test Epoch: {}\tLoss: {:.4f}'.format(epoch, loss_meter.avg))
         return loss_meter.avg
 
-train()
+train(args.mode)
