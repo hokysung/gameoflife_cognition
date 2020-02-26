@@ -26,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('out_dir', type=str, help='where to save checkpoints')
     # parser.add_argument('sup_lvl', type=float, default = 1.0,
     #                     help='how much of the data to supervise [default: 1.0]')
+    parser.add_argument('data_type', type=str, help='random or pattern?')
     parser.add_argument('mode', type=str, help='what kind of model to run?')
     parser.add_argument('--batch_size', type=int, default=10,
                         help='batch size [default=100]')
@@ -41,6 +42,7 @@ if __name__ == '__main__':
     parser.add_argument('--cuda', action='store_true', help='Enable cuda')
     args = parser.parse_args()
 
+    args.out_dir = args.out_dir+"_"+args.data_type
     if not os.path.isdir(args.out_dir):
         os.makedirs(args.out_dir)
 
