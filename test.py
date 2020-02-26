@@ -103,7 +103,7 @@ if __name__ == '__main__':
                         filename='checkpoint_best')
 
     test_dataset = GoL_Sup_Dataset(types=args.data_type, split='Test')
-    test_loader = DataLoader(test_dataset, shuffle=False, batch_size=10)
+    test_loader = DataLoader(test_dataset, shuffle=False, batch_size=100)
 
     if args.mode == 'baseline':
         conv_pred = BaselineCNN(img_size=30)
