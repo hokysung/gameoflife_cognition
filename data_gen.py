@@ -20,49 +20,14 @@ NUM_CONFIG = 200
 class GoL_Sup_Dataset:
     def __init__(self, board_dim=30, types='random', max_timestep=10, split='Train'):
         self.data = []
-        # if os.path.exists('train_data_sup.data'):
-        #     self.data = torch.load('train_data_sup.data')
-        #     return
-        # else:
-        #     self.data = []
-
-        if types == 'random':
-            for _ in range(NUM_CONFIG):
-                distrib = torch.distributions.Bernoulli(0.5)
-                weights = torch.tensor([[1,1,1],[1,10,1],[1,1,1]]).view(1,1,3,3).float()
-                board = distrib.sample((board_dim, board_dim)).view(1,1,board_dim, board_dim)
-                board = board.to(torch.float32)
-                config_data = []
-                for _ in range(max_timestep):
-                    newboard = F.conv2d(board, weights, padding=1).view(1,1,board_dim,board_dim)
-                    newboard = (newboard==12) | (newboard==3) | (newboard==13)
-                    newboard = newboard.to(torch.float32)
-                    # newboard_array = np.int8(newboard) * 255
-                    # img = Image.fromarray(newboard_array).convert('RGB')
-                    # img = np.array(img)
-                    # cv2.imshow("game", img)
-                    # q = cv2.waitKey(100)
-                    # if q == 113:
-                    #     cv2.destroyAllWindows()
-                    #     break
-                    self.data += board.view(board_dim,board_dim), newboard.view(board_dim,board_dim)
-                    board = newboard
-            # breakpoint()
-            self.data = torch.stack(self.data).reshape(NUM_CONFIG * max_timestep, 2, board_dim, board_dim)
-            torch.save(self.data, 'train_data_sup.data')
+        if os.path.exists('train_data_sup_'+types+'.data'):
+            self.data = torch.load('train_data_sup_'+types+'.data')[:2000]
         else:
-            self.datacount = 0
-            for filename in os.listdir('./all/'):
-                if filename.endswith(".rle"): 
-                    #print(filename)
+            if types == 'random':
+                for _ in range(NUM_CONFIG):
+                    distrib = torch.distributions.Bernoulli(0.5)
                     weights = torch.tensor([[1,1,1],[1,10,1],[1,1,1]]).view(1,1,3,3).float()
-                    board = boardmaker.board_maker('./all/'+filename)
-                    if board is None:
-                        continue
-                    board = board.view(1, 1, board_dim, board_dim)
-                    self.datacount += 1
-                    
-                    #board = distrib.sample((board_dim, board_dim)).view(1,1,board_dim, board_dim)
+                    board = distrib.sample((board_dim, board_dim)).view(1,1,board_dim, board_dim)
                     board = board.to(torch.float32)
                     config_data = []
                     for _ in range(max_timestep):
@@ -79,14 +44,42 @@ class GoL_Sup_Dataset:
                         #     break
                         self.data += board.view(board_dim,board_dim), newboard.view(board_dim,board_dim)
                         board = newboard
-                    if(self.datacount == 200):
-                        break
-
-            # breakpoint()
-
-            self.data = torch.stack(self.data).reshape(self.datacount * max_timestep, 2, board_dim, board_dim)
-
-            torch.save(self.data, 'train_data_sup_pattern.data')
+                # breakpoint()
+                self.data = torch.stack(self.data).reshape(NUM_CONFIG * max_timestep, 2, board_dim, board_dim)
+                torch.save(self.data, 'train_data_sup_random.data')
+            else:
+                self.datacount = 0
+                for filename in os.listdir('./all/'):
+                    if filename.endswith(".rle"): 
+                        #print(filename)
+                        weights = torch.tensor([[1,1,1],[1,10,1],[1,1,1]]).view(1,1,3,3).float()
+                        board = boardmaker.board_maker('./all/'+filename)
+                        if board is None:
+                            continue
+                        board = board.view(1, 1, board_dim, board_dim)
+                        self.datacount += 1
+                        
+                        #board = distrib.sample((board_dim, board_dim)).view(1,1,board_dim, board_dim)
+                        board = board.to(torch.float32)
+                        config_data = []
+                        for _ in range(max_timestep):
+                            newboard = F.conv2d(board, weights, padding=1).view(1,1,board_dim,board_dim)
+                            newboard = (newboard==12) | (newboard==3) | (newboard==13)
+                            newboard = newboard.to(torch.float32)
+                            # newboard_array = np.int8(newboard) * 255
+                            # img = Image.fromarray(newboard_array).convert('RGB')
+                            # img = np.array(img)
+                            # cv2.imshow("game", img)
+                            # q = cv2.waitKey(100)
+                            # if q == 113:
+                            #     cv2.destroyAllWindows()
+                            #     break
+                            self.data += board.view(board_dim,board_dim), newboard.view(board_dim,board_dim)
+                            board = newboard
+                        if(self.datacount == 200):
+                            break
+                self.data = torch.stack(self.data).reshape(self.datacount * max_timestep, 2, board_dim, board_dim)
+                torch.save(self.data, 'train_data_sup_pattern.data')
 
         self.data = self.data.float()
         self.data.requires_grad = True
