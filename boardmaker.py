@@ -35,9 +35,12 @@ def decoder(data,x,y):
     return decode
 
 
-def boardmaker(filename):
+def board_maker(filename):
     f=open(filename, "r")
-    lines = f.readlines()
+    try:
+        lines = f.readlines()
+    except:
+        return None
     encoded = ''
     j = 0
     for j in range(len(lines)):
@@ -48,8 +51,11 @@ def boardmaker(filename):
     encoded += '$'
 
     a = lines[j].split(',')
-    x = int(a[0][4:])
-    y = int(a[1][5:])
+    try:
+        x = int(a[0][4:])
+        y = int(a[1][5:])
+    except:
+        return None
     
     if x > 50 or y > 50:
         return None
@@ -58,8 +64,12 @@ def boardmaker(filename):
     board = torch.zeros(x*y)
 
     decoded = decoder(encoded,x,y)
+    if len(decoded) != x*y:
+        print("erroneous data file: ", filename)
+        return None
 
-
+    #print(decoded)
+    #print(len(decoded))
     for i in range(x*y):
         if decoded[i] == 'o':
             board[i] = 1
@@ -75,10 +85,10 @@ def boardmaker(filename):
     
     board = pad(board)
 
-    print(board.shape)
+    #print(board.shape)
 
     return board
 
 
-print(boardmaker("./all/2x2glider.rle"))
+#print(board_maker("./all/128p13.1.rle"))
 
