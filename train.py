@@ -24,8 +24,6 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('out_dir', type=str, help='where to save checkpoints')
-    # parser.add_argument('sup_lvl', type=float, default = 1.0,
-    #                     help='how much of the data to supervise [default: 1.0]')
     parser.add_argument('data_type', type=str, help='random or pattern?')
     parser.add_argument('mode', type=str, help='what kind of model to run?')
     parser.add_argument('--batch_size', type=int, default=100,
@@ -35,10 +33,6 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=50,
                         help='number of training epochs [default: 100]')
     parser.add_argument('--seed', type=int, default=42)
-    # parser.add_argument('--num_iter', type=int, default = 3,
-    #                     help='number of iterations for this setting [default: 1]')
-    # parser.add_argument('--context_condition', type=str, default='all',
-    #                     help='whether the dataset is to include all data')
     parser.add_argument('--cuda', action='store_true', help='Enable cuda')
     args = parser.parse_args()
 

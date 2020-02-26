@@ -34,14 +34,6 @@ class GoL_Sup_Dataset:
                         newboard = F.conv2d(board, weights, padding=1).view(1,1,board_dim,board_dim)
                         newboard = (newboard==12) | (newboard==3) | (newboard==13)
                         newboard = newboard.to(torch.float32)
-                        # newboard_array = np.int8(newboard) * 255
-                        # img = Image.fromarray(newboard_array).convert('RGB')
-                        # img = np.array(img)
-                        # cv2.imshow("game", img)
-                        # q = cv2.waitKey(100)
-                        # if q == 113:
-                        #     cv2.destroyAllWindows()
-                        #     break
                         self.data += board.view(board_dim,board_dim), newboard.view(board_dim,board_dim)
                         board = newboard
                 # breakpoint()
