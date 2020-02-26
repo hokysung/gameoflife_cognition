@@ -64,13 +64,13 @@ if __name__ == '__main__':
 
         # Define model & optimizer
         if mode == 'baseline':
-            conv_pred = BaselineCNN()
+            conv_pred = BaselineCNN(img_size = 30)
             optimizer = torch.optim.Adam(conv_pred.parameters(), lr=args.lr)
             conv_pred.to(device)
             models = [conv_pred]
         elif mode == 'autoencoder':
-            pattern_enc = PatternEncoder()
-            pattern_dec = PatternDecoder()
+            pattern_enc = PatternEncoder(img_size=30)
+            pattern_dec = PatternDecoder(img_size=30)
             optimizer = torch.optim.Adam(
                 chain(
                 pattern_enc.parameters(),

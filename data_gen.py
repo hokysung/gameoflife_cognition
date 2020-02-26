@@ -86,7 +86,6 @@ class GoL_Sup_Dataset:
 
             self.data = torch.stack(self.data).reshape(self.datacount * max_timestep, 2, board_dim, board_dim)
 
-            self.data = self.data[:50]
             torch.save(self.data, 'train_data_sup_pattern.data')
 
         self.data = self.data.float()

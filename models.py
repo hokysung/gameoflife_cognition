@@ -11,7 +11,7 @@ import torch.nn.utils.rnn as rnn_utils
 
 
 class BaselineCNN(nn.Module):
-    def __init__(self, img_size=16, channels=1, kernel_size=3, n_filters=8):
+    def __init__(self, img_size=16, channels=1, kernel_size=3, n_filters=5):
         super(BaselineCNN, self).__init__()
         self.n_filters = n_filters
         self.conv = nn.Sequential(
