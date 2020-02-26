@@ -1,5 +1,7 @@
 import os
 import torch
+import torch.nn as nn
+import random
 
 #f=open("./all/4boats.rle", "r")
 
@@ -33,9 +35,12 @@ def decoder(data,x,y):
     return decode
 
 
-def boardmaker(filename):
+def board_maker(filename):
     f=open(filename, "r")
-    lines = f.readlines()
+    try:
+        lines = f.readlines()
+    except:
+        return None
     encoded = ''
     j = 0
     for j in range(len(lines)):
@@ -46,20 +51,44 @@ def boardmaker(filename):
     encoded += '$'
 
     a = lines[j].split(',')
-    x = int(a[0][4:])
-    y = int(a[1][5:])
+    try:
+        x = int(a[0][4:])
+        y = int(a[1][5:])
+    except:
+        return None
+    
+    if x > 50 or y > 50:
+        return None
+
+
     board = torch.zeros(x*y)
 
     decoded = decoder(encoded,x,y)
+    if len(decoded) != x*y:
+        print("erroneous data file: ", filename)
+        return None
 
-
+    #print(decoded)
+    #print(len(decoded))
     for i in range(x*y):
         if decoded[i] == 'o':
             board[i] = 1
 
 
     board = board.reshape(y,x)
+    hor = 50 - x
+    ver = 50 - y
+    left = int(random.random() * hor)
+    top = int(random.random() * ver)
+    
+    pad = nn.ConstantPad2d((left, hor -  left, top, ver-top), 0)
+    
+    board = pad(board)
+
+    #print(board.shape)
+
     return board
 
 
-print(boardmaker("./all/4boats.rle"))
+#print(board_maker("./all/128p13.1.rle"))
+
