@@ -57,7 +57,7 @@ def board_maker(filename):
     except:
         return None
     
-    if x > 50 or y > 50:
+    if x > 30 or y > 30:
         return None
 
 
@@ -65,7 +65,7 @@ def board_maker(filename):
 
     decoded = decoder(encoded,x,y)
     if len(decoded) != x*y:
-        print("erroneous data file: ", filename)
+        #print("erroneous data file: ", filename)
         return None
 
     #print(decoded)
@@ -76,8 +76,8 @@ def board_maker(filename):
 
 
     board = board.reshape(y,x)
-    hor = 50 - x
-    ver = 50 - y
+    hor = 30 - x
+    ver = 30 - y
     left = int(random.random() * hor)
     top = int(random.random() * ver)
     
