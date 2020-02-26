@@ -30,10 +30,10 @@ if __name__ == '__main__':
     parser.add_argument('mode', type=str, help='what kind of model to run?')
     parser.add_argument('--batch_size', type=int, default=10,
                         help='batch size [default=100]')
-    parser.add_argument('--lr', type=float, default=0.1,
-                        help='learning rate [default=0.1]')
-    parser.add_argument('--epochs', type=int, default=10,
-                        help='number of training epochs [default: 50]')
+    parser.add_argument('--lr', type=float, default=0.01,
+                        help='learning rate [default=0.01]')
+    parser.add_argument('--epochs', type=int, default=100,
+                        help='number of training epochs [default: 100]')
     parser.add_argument('--seed', type=int, default=42)
     # parser.add_argument('--num_iter', type=int, default = 3,
     #                     help='number of iterations for this setting [default: 1]')
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     parser.add_argument('--cuda', action='store_true', help='Enable cuda')
     args = parser.parse_args()
 
-    args.out_dir = args.out_dir+"_"+args.data_type
+    args.out_dir = args.out_dir+"_"+args.data_type+"_"+args.mode
     if not os.path.isdir(args.out_dir):
         os.makedirs(args.out_dir)
 
@@ -54,12 +54,12 @@ if __name__ == '__main__':
 
     def train(mode='baseline'):
         # Define training dataset & build vocab
-        train_dataset = GoL_Sup_Dataset(types='pattern', split='Train')
+        train_dataset = GoL_Sup_Dataset(types=args.data_type, split='Train')
         train_loader = DataLoader(train_dataset, shuffle=True, batch_size=args.batch_size)
         N_mini_batches = len(train_loader)
 
         # Define test dataset
-        test_dataset = GoL_Sup_Dataset(split='Validation')
+        test_dataset = GoL_Sup_Dataset(types = args.data_type, split='Validation')
         test_loader = DataLoader(test_dataset, shuffle=False, batch_size=args.batch_size)
 
         # Define model & optimizer
@@ -116,25 +116,12 @@ if __name__ == '__main__':
             next_pat = next_pat.float()
             # breakpoint()
             
-
             # obtain predicted pattern
             out = curr_pat
             for model in models:
                 out = model(out)
                 # breakpoint()
             pred_next = out
-
-            #여기 지울것...
-            if batch_idx == 0 and epoch == args.epochs:
-                original = curr_pat[0].detach().numpy()
-                #plt.plot(original, cmap="Greys", interpolation='nearest')
-                plt.imsave('Start.png',original,cmap="Greys")
-                answer = next_pat[0].detach().numpy()
-                plt.imsave('End.png',answer, cmap="Greys")
-                prediction = pred_next[0].detach().numpy()
-                plt.imsave('Prediction.png', prediction, cmap="Greys")
-                
-
 
             # breakpoint()
             # loss: mean-squared error

@@ -15,7 +15,7 @@ import boardmaker
 
 from torch.utils.data import DataLoader
 
-NUM_CONFIG = 100
+NUM_CONFIG = 200
 
 class GoL_Sup_Dataset:
     def __init__(self, board_dim=30, types='random', max_timestep=10, split='Train'):
@@ -79,7 +79,11 @@ class GoL_Sup_Dataset:
                         #     break
                         self.data += board.view(board_dim,board_dim), newboard.view(board_dim,board_dim)
                         board = newboard
+                    if(self.datacount == 200):
+                        break
+
             # breakpoint()
+
             self.data = torch.stack(self.data).reshape(self.datacount * max_timestep, 2, board_dim, board_dim)
 
             self.data = self.data[:50]
