@@ -76,8 +76,8 @@ def board_maker(filename):
 
 
     board = board.reshape(y,x)
-    hor = 50 - x
-    ver = 50 - y
+    hor = 30 - x
+    ver = 30 - y
     left = int(random.random() * hor)
     top = int(random.random() * ver)
     

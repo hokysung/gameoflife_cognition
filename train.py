@@ -5,6 +5,7 @@ import sys
 import random
 from itertools import chain
 import numpy as np
+import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 
@@ -28,7 +29,7 @@ if __name__ == '__main__':
     parser.add_argument('mode', type=str, help='what kind of model to run?')
     parser.add_argument('--batch_size', type=int, default=10,
                         help='batch size [default=100]')
-    parser.add_argument('--lr', type=float, default=0.001,
+    parser.add_argument('--lr', type=float, default=0.1,
                         help='learning rate [default=0.1]')
     parser.add_argument('--epochs', type=int, default=10,
                         help='number of training epochs [default: 50]')
@@ -51,7 +52,7 @@ if __name__ == '__main__':
 
     def train(mode='baseline'):
         # Define training dataset & build vocab
-        train_dataset = GoL_Sup_Dataset(split='Train')
+        train_dataset = GoL_Sup_Dataset(types='pattern', split='Train')
         train_loader = DataLoader(train_dataset, shuffle=True, batch_size=args.batch_size)
         N_mini_batches = len(train_loader)
 
@@ -111,8 +112,8 @@ if __name__ == '__main__':
 
             curr_pat = curr_pat.float()
             next_pat = next_pat.float()
-
             # breakpoint()
+            
 
             # obtain predicted pattern
             out = curr_pat
@@ -120,6 +121,18 @@ if __name__ == '__main__':
                 out = model(out)
                 # breakpoint()
             pred_next = out
+
+            #여기 지울것...
+            if batch_idx == 0 and epoch == args.epochs:
+                original = curr_pat[0].detach().numpy()
+                #plt.plot(original, cmap="Greys", interpolation='nearest')
+                plt.imsave('Start.png',original,cmap="Greys")
+                answer = next_pat[0].detach().numpy()
+                plt.imsave('End.png',answer, cmap="Greys")
+                prediction = pred_next[0].detach().numpy()
+                plt.imsave('Prediction.png', prediction, cmap="Greys")
+                
+
 
             # breakpoint()
             # loss: mean-squared error

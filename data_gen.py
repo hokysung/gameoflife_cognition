@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 NUM_CONFIG = 100
 
 class GoL_Sup_Dataset:
-    def __init__(self, board_dim=50, types='random', max_timestep=10, split='Train'):
+    def __init__(self, board_dim=30, types='random', max_timestep=10, split='Train'):
         self.data = []
         # if os.path.exists('train_data_sup.data'):
         #     self.data = torch.load('train_data_sup.data')
@@ -81,7 +81,8 @@ class GoL_Sup_Dataset:
                         board = newboard
             # breakpoint()
             self.data = torch.stack(self.data).reshape(self.datacount * max_timestep, 2, board_dim, board_dim)
-            
+
+            self.data = self.data[:50]
             torch.save(self.data, 'train_data_sup_pattern.data')
 
         self.data = self.data.float()
@@ -155,4 +156,4 @@ def rle_decode(mask_rle, shape):
 #     data.append(board)
 # torch.save(data, 'train.data')
 
-dataset = GoL_Sup_Dataset(types = 'not_random')
+#dataset = GoL_Sup_Dataset(types = 'not_random')
