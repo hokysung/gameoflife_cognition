@@ -78,3 +78,4 @@ def boardmaker(filename):
 
 
 print(boardmaker("./all/2x2glider.rle"))
+
