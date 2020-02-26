@@ -2,6 +2,7 @@ import os
 import sys
 import numpy as np
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 import torch 
 import torch.nn as nn
@@ -19,7 +20,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('load_dir', type=str, help='where to load checkpoints from')
-    parser.add_argument('out_dir', type=str, help='where to store results to')
+    #parser.add_argument('out_dir', type=str, help='where to store results to')
     parser.add_argument('data_type', type=str, help='random or pattern?')
     parser.add_argument('mode', type=str, help='what kind of model to run?')
     parser.add_argument('--num_iter', type=int, default=1,
@@ -37,11 +38,11 @@ if __name__ == '__main__':
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
-    args.load_dir = args.load_dir+"_"+args.data_type+"_"+args.mode
-    args.out_dir = args.load_dir+"_"+args.data_type+"_"+args.mode
+    args.load_dir = args.load_dir+"_"+args.data_type+"_"+args.mode+"/"
+    #args.out_dir = args.load_dir+"_"+args.data_type+"_"+args.mode
 
-    if not os.path.isdir(args.out_dir):
-        os.makedirs(args.out_dir)
+    #if not os.path.isdir(args.out_dir):
+    #    os.makedirs(args.out_dir)
 
     def test_loss(models):
         '''
@@ -63,6 +64,16 @@ if __name__ == '__main__':
                 for model in models:
                     out = model(out)
                 pred_next = out
+
+                if batch_idx == 0:
+                    original = curr_pat[0].detach().numpy()
+                    #plt.plot(original, cmap="Greys", interpolation='nearest')
+                    plt.imsave('./images_'+args.data_type+'_'+args.mode+'/'+'Start.png',original,cmap="Greys")
+                    answer = next_pat[0].detach().numpy()
+                    plt.imsave('./images_'+args.data_type+'_'+args.mode+'/'+'End.png',answer, cmap="Greys")
+                    prediction = pred_next[0].detach().numpy()
+                    plt.imsave('./images_'+args.data_type+'_'+args.mode+'/'+'Prediction.png', prediction, cmap="Greys")
+                
 
                 # loss: mean-squared error
                 loss = F.mse_loss(pred_next, next_pat)
