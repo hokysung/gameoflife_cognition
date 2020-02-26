@@ -28,11 +28,11 @@ if __name__ == '__main__':
     #                     help='how much of the data to supervise [default: 1.0]')
     parser.add_argument('data_type', type=str, help='random or pattern?')
     parser.add_argument('mode', type=str, help='what kind of model to run?')
-    parser.add_argument('--batch_size', type=int, default=10,
+    parser.add_argument('--batch_size', type=int, default=100,
                         help='batch size [default=100]')
     parser.add_argument('--lr', type=float, default=0.01,
                         help='learning rate [default=0.01]')
-    parser.add_argument('--epochs', type=int, default=100,
+    parser.add_argument('--epochs', type=int, default=50,
                         help='number of training epochs [default: 100]')
     parser.add_argument('--seed', type=int, default=42)
     # parser.add_argument('--num_iter', type=int, default = 3,
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         N_mini_batches = len(train_loader)
 
         # Define test dataset
-        test_dataset = GoL_Sup_Dataset(types = args.data_type, split='Validation')
+        test_dataset = GoL_Sup_Dataset(types=args.data_type, split='Validation')
         test_loader = DataLoader(test_dataset, shuffle=False, batch_size=args.batch_size)
 
         # Define model & optimizer
