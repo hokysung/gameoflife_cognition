@@ -17,17 +17,18 @@ from convolution import convolve
 from utils import board_maker
 from torch.utils.data import DataLoader
 
-NUM_CONFIG = 100
+NUM_CONFIG = 1000
 
 class GoL_Sup_Dataset:
-    def __init__(self, board_dim=30, data_type='random', max_timestep=10, custom_features=False, split='Train'):
+    def __init__(self, board_dim=16, data_type='random', max_timestep=10, custom_features=False, split='Train'):
         self.data = []
         if os.path.exists('train_data_sup_'+data_type+'.data'):
             self.data = torch.load('train_data_sup_'+data_type+'.data')[:1000]
         else:
             if data_type == 'random':
+                max_timestep = 1
                 for _ in range(NUM_CONFIG):
-                    distrib = torch.distributions.Bernoulli(0.5)
+                    distrib = torch.distributions.Bernoulli(0.05)
                     weights = torch.tensor([[1,1,1],[1,10,1],[1,1,1]]).view(1,1,3,3).float()
                     board = distrib.sample((board_dim, board_dim)).view(1,1,board_dim, board_dim)
                     board = board.to(torch.float32)
@@ -42,6 +43,7 @@ class GoL_Sup_Dataset:
                 self.data = torch.stack(self.data).reshape(NUM_CONFIG * max_timestep, 2, board_dim, board_dim)
                 torch.save(self.data, 'train_data_sup_random.data')
             else:
+                NUM_CONFIG = 100
                 self.datacount = 0
                 for filename in os.listdir('./all/'):
                     if filename.endswith(".rle"): 
@@ -70,15 +72,17 @@ class GoL_Sup_Dataset:
                             #     break
                             self.data += board.view(board_dim,board_dim), newboard.view(board_dim,board_dim)
                             board = newboard
-                        if(self.datacount == 200):
+                        if(self.datacount == NUM_CONFIG):
                             break
                 self.data = torch.stack(self.data).reshape(self.datacount * max_timestep, 2, board_dim, board_dim)
                 torch.save(self.data, 'train_data_sup_pattern.data')
+        # breakpoint()
 
         self.data = self.data.float()
-        self.data.requires_grad = True
+        self.data.requires_grad = False
         if custom_features == True:
             self.data = extract_custom_features(self.data)
+            self.data.requires_grad = True
             torch.save(self.data, 'train_data_sup_'+data_type+'_'+'custom'+'.data')
 
         if split == 'Train':
@@ -87,6 +91,32 @@ class GoL_Sup_Dataset:
             self.data = self.data[int(len(self.data)*0.8):int(len(self.data)*0.9)]
         else:
             self.data = self.data[int(len(self.data)*0.9):]
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, index):
+        return self.data[index][0], self.data[index][1]
+
+class OrderedGOLDataset:
+    def __init__(self, data_dir='order_data/', data_type=None, data_order='mixed', board_dim=16, split='Train'):
+        self.data = []
+        if split == 'Validation':
+            self.data = torch.load(data_dir + 'random_val.data')
+        elif split == 'Test':
+            self.data = torch.load(data_dir + 'random_test.data')
+        else:
+            if data_order == 'mixed':
+                self.data = torch.load(data_dir + 'mixed_train.data')
+            else:
+                assert data_type != None
+                self.data = torch.load(data_dir + data_type + '.data')
+
+        self.data = self.data.float()
+        # if custom_features == True:
+        #     self.data = extract_custom_features(self.data)
+        #     self.data.requires_grad = True
+        #     torch.save(self.data, 'train_data_sup_'+data_type+'_'+'custom'+'.data')
 
     def __len__(self):
         return self.data.shape[0]

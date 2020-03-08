@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from data_gen import GoL_Sup_Dataset
+from data_gen import GoL_Sup_Dataset, OrderedGOLDataset
 
 from utils import (AverageMeter, save_checkpoint)
 from models import (BaselineCNN, CustomFeatureCNN, PatternEncoder, PatternDecoder)
@@ -24,10 +24,10 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('out_dir', type=str, help='where to save checkpoints')
-    parser.add_argument('data_type', type=str, help='random or pattern?')
+    parser.add_argument('data_order', type=str, help='ordered or mixed?')
     parser.add_argument('mode', type=str, help='what kind of model to run?')
-    parser.add_argument('--img_size', type=int, default=30, help='board size?')
-    parser.add_argument('--custom', action='store_true', help='Using custom features?')
+    parser.add_argument('--img_size', type=int, default=16, help='board size?')
+    # parser.add_argument('--custom', action='store_true', help='Using custom features?')
     parser.add_argument('--batch_size', type=int, default=100,
                         help='batch size [default=100]')
     parser.add_argument('--lr', type=float, default=0.01,
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('--cuda', action='store_true', help='Enable cuda')
     args = parser.parse_args()
 
-    args.out_dir = args.out_dir+"_"+args.data_type+"_"+args.mode
+    args.out_dir = args.out_dir+"_"+args.data_order+"_"+args.mode
     if not os.path.isdir(args.out_dir):
         os.makedirs(args.out_dir)
 
@@ -51,53 +51,67 @@ if __name__ == '__main__':
 
     def train(args):
         # Define training dataset & build vocab
-        train_dataset = GoL_Sup_Dataset(data_type=args.data_type, custom_features=args.custom, split='Train')
-        train_loader = DataLoader(train_dataset, shuffle=True, batch_size=args.batch_size)
-        N_mini_batches = len(train_loader)
+        train_datasets = get_datasets(args, 'Train')
+        train_loaders = []
+        for dataset in train_datasets:
+            train_loaders.append(DataLoader(train_dataset, shuffle=True, batch_size=args.batch_size))
 
         # Define test dataset
-        test_dataset = GoL_Sup_Dataset(data_type=args.data_type, custom_features=args.custom, split='Validation')
+        val_dataset = get_datasets(args, 'Validation')
         test_loader = DataLoader(test_dataset, shuffle=False, batch_size=args.batch_size)
 
         # Define model & optimizer
         if args.mode == 'baseline':
-            conv_pred = BaselineCNN(img_size=args.img_size) if not args.custom else CustomFeatureCNN(img_size=args.img_size)
+            conv_pred = BaselineCNN(img_size=args.img_size)
             optimizer = torch.optim.Adam(conv_pred.parameters(), lr=args.lr)
             conv_pred.to(device)
             models = [conv_pred]
-        elif args.mode == 'autoencoder':
-            pattern_enc = PatternEncoder(img_size=args.img_size)
-            pattern_dec = PatternDecoder(img_size=args.img_size)
-            optimizer = torch.optim.Adam(
-                chain(
-                pattern_enc.parameters(),
-                pattern_dec.parameters(),
-            ), lr=args.lr)
-            # models = [pattern_enc]
-            models = [pattern_enc, pattern_dec]
         
         best_loss = float('inf')
         track_loss = np.zeros((args.epochs, 2))
 
-        for epoch in range(1, args.epochs + 1):
-            train_loss = train_one_epoch(epoch, models, optimizer, train_loader)
-            test_loss = test_one_epoch(epoch, models, test_loader)
+        if args.data_order == 'mixed':
+            for epoch in range(1, args.epochs + 1):
+                train_loss = train_one_epoch(epoch, models, optimizer, train_loaders[0])
+                test_loss = test_one_epoch(epoch, models, test_loader)
 
-            is_best = test_loss < best_loss
-            best_loss = min(test_loss, best_loss)
-            track_loss[epoch - 1, 0] = train_loss
-            track_loss[epoch - 1, 1] = test_loss
-            
-            save_checkpoint({
-                'epoch': epoch,
-                'models': [model.state_dict() for model in models],
-                'optimizer': optimizer.state_dict(),
-                'track_loss': track_loss,
-                'cmd_line_args': args,
-            }, is_best, folder=args.out_dir,
-            filename='checkpoint')
-            np.save(os.path.join(args.out_dir,
-                'loss.npy'), track_loss)
+                is_best = test_loss < best_loss
+                best_loss = min(test_loss, best_loss)
+                track_loss[epoch - 1, 0] = train_loss
+                track_loss[epoch - 1, 1] = test_loss
+                
+                save_checkpoint({
+                    'epoch': epoch,
+                    'models': [model.state_dict() for model in models],
+                    'optimizer': optimizer.state_dict(),
+                    'track_loss': track_loss,
+                    'cmd_line_args': args,
+                }, is_best, folder=args.out_dir,
+                filename='checkpoint')
+                np.save(os.path.join(args.out_dir,
+                    'loss.npy'), track_loss)
+        elif args.data_order == 'ordered':
+            for i in range(len(train_loaders)):
+                print("Training on {i}th dataset")
+                for epoch in range(1, args.epochs + 1):
+                    train_loss = train_one_epoch(epoch, models, optimizer, train_loaders[i])
+                    test_loss = test_one_epoch(epoch, models, test_loader)
+
+                    is_best = test_loss < best_loss
+                    best_loss = min(test_loss, best_loss)
+                    track_loss[epoch - 1, 0] = train_loss
+                    track_loss[epoch - 1, 1] = test_loss
+                    
+                    save_checkpoint({
+                        'epoch': epoch+args.epochs*i,
+                        'models': [model.state_dict() for model in models],
+                        'optimizer': optimizer.state_dict(),
+                        'track_loss': track_loss,
+                        'cmd_line_args': args,
+                    }, is_best, folder=args.out_dir,
+                    filename='checkpoint')
+                    np.save(os.path.join(args.out_dir,
+                        'loss.npy'), track_loss)
 
 
     def train_one_epoch(epoch, models, optimizer, train_loader):
@@ -172,3 +186,15 @@ if __name__ == '__main__':
         return loss_meter.avg
 
     train(args)
+
+def get_datasets(args, split):
+    if split != 'Train':
+        return OrderedGOLDataset(split=split)
+    
+    if args.data_order == 'ordered':
+        datasets = []
+        for data_type in ['still', 'oscillator', 'spaceship']:
+            datasets.append(OrderedGOLDataset(split=split, data_type=data_type, data_order='ordered'))
+        return datasets
+    elif args.data_order == 'mixed':
+        return [OrderedGOLDataset(split=split, data_order='mixed')]

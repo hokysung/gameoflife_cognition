@@ -14,15 +14,18 @@ from torch.utils.data import DataLoader
 from data_gen import GoL_Sup_Dataset
 
 from utils import (AverageMeter, save_checkpoint)
-from models import (BaselineCNN, PatternEncoder, PatternDecoder)
+from models import (BaselineCNN, CustomFeatureCNN, PatternEncoder, PatternDecoder)
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('load_dir', type=str, help='where to load checkpoints from')
     #parser.add_argument('out_dir', type=str, help='where to store results to')
-    parser.add_argument('data_type', type=str, help='random or pattern?')
+    parser.add_argument('train_data_type', type=str, help='random or pattern?')
+    parser.add_argument('test_data_type', type=str, help='random or pattern?')
     parser.add_argument('mode', type=str, help='what kind of model to run?')
+    parser.add_argument('--img_size', type=int, default=30, help='board size?')
+    parser.add_argument('--custom', action='store_true', help='Using custom features?')
     parser.add_argument('--num_iter', type=int, default=1,
                         help='number of total iterations performed on each setting [default: 1]')
     parser.add_argument('--context_condition', type=str, default='all',
@@ -38,7 +41,7 @@ if __name__ == '__main__':
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
-    args.load_dir = args.load_dir+"_"+args.data_type+"_"+args.mode+"/"
+    args.load_dir = args.load_dir+"_"+args.train_data_type+"_"+args.mode+"/"
     #args.out_dir = args.load_dir+"_"+args.data_type+"_"+args.mode
 
     #if not os.path.isdir(args.out_dir):
@@ -65,14 +68,14 @@ if __name__ == '__main__':
                     out = model(out)
                 pred_next = out
 
-                if batch_idx == 0:
-                    original = curr_pat[0].detach().numpy()
-                    #plt.plot(original, cmap="Greys", interpolation='nearest')
-                    plt.imsave('./images_'+args.data_type+'_'+args.mode+'/'+'Start.png',original,cmap="Greys")
-                    answer = next_pat[0].detach().numpy()
-                    plt.imsave('./images_'+args.data_type+'_'+args.mode+'/'+'End.png',answer, cmap="Greys")
-                    prediction = pred_next[0].detach().numpy()
-                    plt.imsave('./images_'+args.data_type+'_'+args.mode+'/'+'Prediction.png', prediction, cmap="Greys")
+                # if batch_idx == 0:
+                #     original = curr_pat[0].detach().numpy()
+                #     #plt.plot(original, cmap="Greys", interpolation='nearest')
+                    # plt.imsave('./images_'+args.data_type+'_'+args.mode+'/'+'Start.png',original,cmap="Greys")
+                    # answer = next_pat[0].detach().numpy()
+                    # plt.imsave('./images_'+args.data_type+'_'+args.mode+'/'+'End.png',answer, cmap="Greys")
+                    # prediction = pred_next[0].detach().numpy()
+                    # plt.imsave('./images_'+args.data_type+'_'+args.mode+'/'+'Prediction.png', prediction, cmap="Greys")
                 
 
                 # loss: mean-squared error
@@ -102,16 +105,16 @@ if __name__ == '__main__':
         load_checkpoint(folder=args.load_dir,
                         filename='checkpoint_best')
 
-    test_dataset = GoL_Sup_Dataset(data_type=args.data_type, split='Test')
+    test_dataset = GoL_Sup_Dataset(data_type=args.test_data_type, custom_features=args.custom, split='Test')
     test_loader = DataLoader(test_dataset, shuffle=False, batch_size=100)
 
     if args.mode == 'baseline':
-        conv_pred = BaselineCNN(img_size=30)
+        conv_pred = BaselineCNN(img_size=args.img_size) if not args.custom else CustomFeatureCNN(img_size=args.img_size)
         conv_pred.load_state_dict(models[0])
         models = [conv_pred]
     else:
-        pattern_enc = PatternEncoder(img_size=30)
-        pattern_dec = PatternDecoder(img_size=30)
+        pattern_enc = PatternEncoder(img_size=args.img_size)
+        pattern_dec = PatternDecoder(img_size=args.img_size)
         pattern_enc.load_state_dict(models[0])
         pattern_dec.load_state_dict(models[1])
         models = [pattern_enc, pattern_dec]

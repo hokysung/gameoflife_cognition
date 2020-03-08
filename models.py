@@ -15,6 +15,7 @@ from convolution import convolve
 class BaselineCNN(nn.Module):
     def __init__(self, img_size=16, channels=1, kernel_size=3, n_filters=5):
         super(BaselineCNN, self).__init__()
+        self.channels = channels
         self.n_filters = n_filters
         self.conv = nn.Sequential(
                         nn.Conv2d(channels, n_filters, kernel_size, padding=1),
@@ -28,9 +29,32 @@ class BaselineCNN(nn.Module):
     def forward(self, pattern_input):
         batch_size = pattern_input[0]
 
-        conv = self.conv(pattern_input.unsqueeze(1))
+        patten_input = pattern_input.unsqueeze(1)
+        conv = self.conv(pattern_input)
         result = self.proj(conv.permute(0, 2, 3, 1))
+        breakpoint()
         return result.squeeze(-1)
+
+class CustomFeatureCNN(nn.Module):
+    def __init__(self, img_size=16, channels=8, kernel_size=3, n_filters=8):
+        super(CustomFeatureCNN, self).__init__()
+        self.channels = channels
+        self.n_filters = n_filters
+        self.conv = nn.Sequential(
+                        nn.Conv2d(channels, n_filters, kernel_size, padding=1),
+                        nn.ReLU()
+                    )
+        self.proj = nn.Sequential(
+                        nn.Linear(n_filters, 1),
+                        nn.Sigmoid()
+                    )
+
+    def forward(self, pattern_input):
+        batch_size = pattern_input[0]
+
+        conv = self.conv(pattern_input)
+        # result = self.proj(conv.permute(0, 2, 3, 1))
+        return conv
 
 class PatternEncoder(nn.Module):
     def __init__(self, img_size=16, channels=1, kernel_size=3, hidden_dim=256, n_filters=8, z_dim=128):
