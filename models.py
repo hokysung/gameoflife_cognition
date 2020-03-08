@@ -9,6 +9,8 @@ import torch.nn.functional as F
 from torchvision import transforms
 import torch.nn.utils.rnn as rnn_utils
 
+from convolution import convolve
+
 
 class BaselineCNN(nn.Module):
     def __init__(self, img_size=16, channels=1, kernel_size=3, n_filters=5):
