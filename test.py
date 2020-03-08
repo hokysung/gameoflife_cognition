@@ -86,8 +86,7 @@ if __name__ == '__main__':
                 pbar.set_postfix({'loss': loss_meter.avg})
                 pbar.update()
             pbar.close()
-            if epoch % 10 == 0:
-                print('====> Test Epoch: {}\tLoss: {:.4f}'.format(epoch, loss_meter.avg))
+            print('====> Test Epoch: {}\tLoss: {:.4f}'.format(epoch, loss_meter.avg))
         return loss_meter.avg
 
     def load_checkpoint(folder='./', filename='model_best'):

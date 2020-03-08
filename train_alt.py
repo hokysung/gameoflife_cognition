@@ -38,7 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('--cuda', action='store_true', help='Enable cuda')
     args = parser.parse_args()
 
-    args.out_dir = args.out_dir+"_"+args.data_order+"_"+args.mode
+    args.out_dir = args.out_dir+"_"+args.data_order+"_"+args.mode+"/"
     if not os.path.isdir(args.out_dir):
         os.makedirs(args.out_dir)
 
@@ -49,7 +49,10 @@ if __name__ == '__main__':
     device = torch.device('cuda' if args.cuda else 'cpu')
     print(args)
 
-    def train(args):
+    def train(iteration, args):
+        out_path = args.out_dir+'run_'+str(iteration)
+        os.makedirs(out_path)
+
         # Define training dataset & build vocab
         train_datasets = get_datasets(args, 'Train')
         train_loaders = []
@@ -81,18 +84,21 @@ if __name__ == '__main__':
                 track_loss[epoch - 1, 1] = test_loss
                 
                 save_checkpoint({
+                    'seed': args.seed,
+                    'iter': iteration,
                     'epoch': epoch,
                     'models': [model.state_dict() for model in models],
                     'optimizer': optimizer.state_dict(),
                     'track_loss': track_loss,
                     'cmd_line_args': args,
-                }, is_best, folder=args.out_dir,
+                }, is_best, folder=out_path,
                 filename='checkpoint')
-                np.save(os.path.join(args.out_dir,
+                np.save(os.path.join(out_path,
                     'loss.npy'), track_loss)
         elif args.data_order == 'ordered':
             for i in range(len(train_loaders)):
-                print("Training on {i}th dataset")
+                print()
+                print("Training on {}th dataset".format(i))
                 for epoch in range(1, args.epochs + 1):
                     train_loss = train_one_epoch(epoch, models, optimizer, train_loaders[i])
                     test_loss = test_one_epoch(epoch, models, test_loader)
@@ -103,16 +109,17 @@ if __name__ == '__main__':
                     track_loss[epoch - 1, 1] = test_loss
                     
                     save_checkpoint({
-                        'epoch': epoch+args.epochs*i,
+                        'seed': args.seed,
+                        'iter': iteration,
+                        'epoch': epoch,
                         'models': [model.state_dict() for model in models],
                         'optimizer': optimizer.state_dict(),
                         'track_loss': track_loss,
                         'cmd_line_args': args,
-                    }, is_best, folder=args.out_dir,
-                    filename='checkpoint')
-                    np.save(os.path.join(args.out_dir,
-                        'loss.npy'), track_loss)
-
+                    }, is_best, folder=out_path,
+                    filename='checkpoint_{}'.format(i))
+                    np.save(os.path.join(out_path,
+                        'loss_{}.npy'.format(i)), track_loss)
 
     def train_one_epoch(epoch, models, optimizer, train_loader):
         for model in models:
@@ -197,4 +204,21 @@ if __name__ == '__main__':
         elif args.data_order == 'mixed':
             return [OrderedGOLDataset(split=split, data_order='mixed')]
 
-    train(args)
+    for iteration in range(10):
+        print()
+        print("=========================================================")
+        print()
+        print("Run iteration {}".format(iteration))
+
+        # set random seeds
+        # random_iter_seed = random.randint(0, 500)
+        random_iter_seed = iteration
+        print("Random seed set to : {}".format(iteration))
+
+        # torch.cuda.manual_seed(random_iter_seed)
+        random.seed(random_iter_seed)
+        torch.manual_seed(random_iter_seed)
+        np.random.seed(random_iter_seed)
+        args.seed = random_iter_seed
+
+        train(iteration, args)

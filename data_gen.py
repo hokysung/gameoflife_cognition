@@ -112,7 +112,7 @@ class OrderedGOLDataset:
                 self.data = torch.load(data_dir + data_type + '.data')
 
         self.data = self.data.float()
-        self.data = self.data[:self.data.size()[0]]
+        # self.data = self.data[:self.data.size()[0]]
         # if custom_features == True:
         #     self.data = extract_custom_features(self.data)
         #     self.data.requires_grad = True
