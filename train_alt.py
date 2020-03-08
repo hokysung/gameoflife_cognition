@@ -54,10 +54,10 @@ if __name__ == '__main__':
         train_datasets = get_datasets(args, 'Train')
         train_loaders = []
         for dataset in train_datasets:
-            train_loaders.append(DataLoader(train_dataset, shuffle=True, batch_size=args.batch_size))
+            train_loaders.append(DataLoader(dataset, shuffle=True, batch_size=args.batch_size))
 
         # Define test dataset
-        val_dataset = get_datasets(args, 'Validation')
+        test_dataset = get_datasets(args, 'Validation')
         test_loader = DataLoader(test_dataset, shuffle=False, batch_size=args.batch_size)
 
         # Define model & optimizer
@@ -185,16 +185,16 @@ if __name__ == '__main__':
                 print('====> Test Epoch: {}\tLoss: {:.4f}'.format(epoch, loss_meter.avg))
         return loss_meter.avg
 
-    train(args)
+    def get_datasets(args, split):
+        if split != 'Train':
+            return OrderedGOLDataset(split=split)
+        
+        if args.data_order == 'ordered':
+            datasets = []
+            for data_type in ['still', 'oscillator', 'spaceship', 'random']:
+                datasets.append(OrderedGOLDataset(split=split, data_type=data_type, data_order='ordered'))
+            return datasets
+        elif args.data_order == 'mixed':
+            return [OrderedGOLDataset(split=split, data_order='mixed')]
 
-def get_datasets(args, split):
-    if split != 'Train':
-        return OrderedGOLDataset(split=split)
-    
-    if args.data_order == 'ordered':
-        datasets = []
-        for data_type in ['still', 'oscillator', 'spaceship']:
-            datasets.append(OrderedGOLDataset(split=split, data_type=data_type, data_order='ordered'))
-        return datasets
-    elif args.data_order == 'mixed':
-        return [OrderedGOLDataset(split=split, data_order='mixed')]
+    train(args)

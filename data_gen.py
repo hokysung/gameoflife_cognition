@@ -12,7 +12,6 @@ import pickle
 import os
 
 import boardmaker
-from convolution import convolve
 
 from utils import board_maker
 from torch.utils.data import DataLoader
@@ -99,20 +98,21 @@ class GoL_Sup_Dataset:
         return self.data[index][0], self.data[index][1]
 
 class OrderedGOLDataset:
-    def __init__(self, data_dir='order_data/', data_type=None, data_order='mixed', board_dim=16, split='Train'):
+    def __init__(self, data_dir='dataset_nodie/', data_type=None, data_order='mixed', board_dim=16, split='Train'):
         self.data = []
         if split == 'Validation':
-            self.data = torch.load(data_dir + 'random_val.data')
+            self.data = torch.load(data_dir + 'random_dev.data')
         elif split == 'Test':
             self.data = torch.load(data_dir + 'random_test.data')
         else:
             if data_order == 'mixed':
-                self.data = torch.load(data_dir + 'mixed_train.data')
+                self.data = torch.load(data_dir + 'mixed.data')
             else:
                 assert data_type != None
                 self.data = torch.load(data_dir + data_type + '.data')
 
         self.data = self.data.float()
+        self.data = self.data[:self.data.size()[0]]
         # if custom_features == True:
         #     self.data = extract_custom_features(self.data)
         #     self.data.requires_grad = True

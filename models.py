@@ -9,11 +9,8 @@ import torch.nn.functional as F
 from torchvision import transforms
 import torch.nn.utils.rnn as rnn_utils
 
-from convolution import convolve
-
-
 class BaselineCNN(nn.Module):
-    def __init__(self, img_size=16, channels=1, kernel_size=3, n_filters=5):
+    def __init__(self, img_size=16, channels=1, kernel_size=3, n_filters=8):
         super(BaselineCNN, self).__init__()
         self.channels = channels
         self.n_filters = n_filters
@@ -29,10 +26,10 @@ class BaselineCNN(nn.Module):
     def forward(self, pattern_input):
         batch_size = pattern_input[0]
 
-        patten_input = pattern_input.unsqueeze(1)
+        # breakpoint()
+        pattern_input = pattern_input.unsqueeze(1)
         conv = self.conv(pattern_input)
         result = self.proj(conv.permute(0, 2, 3, 1))
-        breakpoint()
         return result.squeeze(-1)
 
 class CustomFeatureCNN(nn.Module):
