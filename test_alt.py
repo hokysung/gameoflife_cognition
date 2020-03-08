@@ -9,6 +9,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn.functional as F
+from torchnet import meter
 
 from torch.utils.data import DataLoader
 from data_gen import GoL_Sup_Dataset, OrderedGOLDataset
@@ -47,6 +48,25 @@ if __name__ == '__main__':
     #if not os.path.isdir(args.out_dir):
     #    os.makedirs(args.out_dir)
 
+    def matthews(pred, truth):
+        matthews_val = 0
+        for i in range(len(pred)):
+            confusion_matrix = meter.ConfusionMeter(2)
+            confusion_matrix.add(pred, truth)
+            tp = int(confusion_matrix.conf[0][0])
+            fp = int(confusion_matrix.conf[0][1])
+            fn = int(confusion_matrix.conf[1][0])
+            tn = int(confusion_matrix.conf[1][1])
+            try:
+                m = float((tp * tn) - (fp * fn)) / \
+                    math.sqrt(float((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))
+            except ZeroDivisionError:
+                m = 0
+
+            matthews_val += m
+            
+        return matthews_val / len(pred)
+
     def test_loss(models):
         '''
         Test model on newly seen dataset -- gives final test loss
@@ -57,6 +77,7 @@ if __name__ == '__main__':
 
         with torch.no_grad():
             loss_meter = AverageMeter()
+            matthews_meter = AverageMeter()
 
             pbar = tqdm(total=len(test_loader))
             for batch_idx, (curr_pat, next_pat) in enumerate(test_loader):
@@ -78,17 +99,20 @@ if __name__ == '__main__':
                     # plt.imsave('./images_'+args.data_type+'_'+args.mode+'/'+'Prediction.png', prediction, cmap="Greys")
                 
 
+                #matthews
+                m = matthews(pred_next, next_pat)
                 # loss: mean-squared error
                 loss = F.mse_loss(pred_next, next_pat)
 
+                matthews_meter.update(m, batch_size)
                 loss_meter.update(loss.item(), batch_size)
 
                 pbar.set_postfix({'loss': loss_meter.avg})
                 pbar.update()
             pbar.close()
             if epoch % 10 == 0:
-                print('====> Test Epoch: {}\tLoss: {:.4f}'.format(epoch, loss_meter.avg))
-        return loss_meter.avg
+                print('====> Test Epoch: {}\tLoss: {:.4f}\tMatthews:{:.4f}'.format(epoch, loss_meter.avg, matthews_meter.avg))
+        return loss_meter.avg, matthews_meter.avg
 
     def load_checkpoint(folder='./', filename='model_best'):
         print("\nloading checkpoint file: {}.pth.tar ...\n".format(filename)) 
@@ -120,6 +144,7 @@ if __name__ == '__main__':
         pattern_dec.load_state_dict(models[1])
         models = [pattern_enc, pattern_dec]
 
-    loss = test_loss(models)
+    loss, matthews = test_loss(models)
     print()
     print("Final test loss: {}".format(loss))
+    print("Final matthews score: {}".format(matthews))
