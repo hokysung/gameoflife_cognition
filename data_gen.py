@@ -12,18 +12,20 @@ import pickle
 import os
 
 import boardmaker
+from convolution import convolve
 
+from utils import board_maker
 from torch.utils.data import DataLoader
 
-NUM_CONFIG = 200
+NUM_CONFIG = 100
 
 class GoL_Sup_Dataset:
-    def __init__(self, board_dim=30, types='random', max_timestep=10, split='Train'):
+    def __init__(self, board_dim=30, data_type='random', max_timestep=10, custom_features=False, split='Train'):
         self.data = []
-        if os.path.exists('train_data_sup_'+types+'.data'):
-            self.data = torch.load('train_data_sup_'+types+'.data')[:2000]
+        if os.path.exists('train_data_sup_'+data_type+'.data'):
+            self.data = torch.load('train_data_sup_'+data_type+'.data')[:1000]
         else:
-            if types == 'random':
+            if data_type == 'random':
                 for _ in range(NUM_CONFIG):
                     distrib = torch.distributions.Bernoulli(0.5)
                     weights = torch.tensor([[1,1,1],[1,10,1],[1,1,1]]).view(1,1,3,3).float()
@@ -75,6 +77,9 @@ class GoL_Sup_Dataset:
 
         self.data = self.data.float()
         self.data.requires_grad = True
+        if custom_features == True:
+            self.data = extract_custom_features(self.data)
+            torch.save(self.data, 'train_data_sup_'+data_type+'_'+'custom'+'.data')
 
         if split == 'Train':
             self.data = self.data[:int(len(self.data)*0.8)]
@@ -89,12 +94,23 @@ class GoL_Sup_Dataset:
     def __getitem__(self, index):
         return self.data[index][0], self.data[index][1]
 
-# sup_dataset = GoL_Sup_Dataset()
-# sup_dataloader = DataLoader(sup_dataset, shuffle=True, batch_size=5)
-# for batch_idx, (prev_board, next_board) in enumerate(sup_dataloader):
-#     print(batch_idx)
-#     print(prev_board)
-#     print(next_board)
+
+def extract_custom_features(board):
+    weights = torch.FloatTensor([[[0,0,0],[1,1,1],[0,0,0]], [[0,1,0],[0,1,0],[0,1,0]], [[1,0,0],[0,1,0],[0,0,1]], [[0,0,1],[0,1,0],[1,0,0]],
+    [[1,1,0],[1,0,0],[0,0,0]], [[0,1,1],[0,0,1],[0,0,0]], [[0,0,0],[1,0,0],[1,1,0]], [[0,0,0],[0,0,1],[0,1,1]]])
+    n_filters, fw, fh = weights.size()
+    weights = weights.view(n_filters, 1, fw, fh)
+
+    n, _, w,h = board.size()
+    board = board.to(torch.float32)
+    board_reshaped = board.view(n*2, 1, w,h)
+
+    filtered = F.conv2d(board_reshaped, weights, padding=1)
+    avgpool = torch.nn.AvgPool2d(3)
+    features = avgpool(filtered)
+    features = features.reshape(n, 2, n_filters, w//3, h//3)
+
+    return features
 
 def rle_decode(mask_rle, shape):
     '''
@@ -111,37 +127,3 @@ def rle_decode(mask_rle, shape):
     for lo, hi in zip(starts, ends):
         img[lo:hi] = 1
     return img.reshape(shape)
-
-# BOARD_HEIGHT = 100
-# BOARD_WIDTH = 100
-
-# distrib = torch.distributions.Bernoulli(0.7)
-
-# weights = torch.tensor([[1,1,1],[1,10,1],[1,1,1]]).view(1,1,3,3)
-# board = distrib.sample((BOARD_HEIGHT,BOARD_WIDTH)).view(1,1,BOARD_HEIGHT,BOARD_WIDTH)
-# board = board.to(torch.int64)
-
-# cv2.namedWindow("game", cv2.WINDOW_NORMAL)
-
-# if False:
-#     data = torch.load('train.data')
-#     data.append(board)
-# else:
-#     data = [board]
-
-# while True:
-#     newboard = F.conv2d(board, weights, padding=1).view(BOARD_HEIGHT,BOARD_WIDTH)
-#     newboard = (newboard==12) | (newboard==3) | (newboard==13)
-#     newboard_array = np.int8(newboard) * 255
-#     img = Image.fromarray(newboard_array).convert('RGB')
-#     img = np.array(img)
-#     cv2.imshow("game", img)
-#     q = cv2.waitKey(100)
-#     if q == 113: # 'q'
-#         cv2.destroyAllWindows()
-#         break
-#     board = torch.tensor(newboard_array/255, dtype=torch.int64).view(1,1,BOARD_HEIGHT,BOARD_WIDTH)
-#     data.append(board)
-# torch.save(data, 'train.data')
-
-#dataset = GoL_Sup_Dataset(types = 'not_random')

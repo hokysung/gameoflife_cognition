@@ -102,7 +102,7 @@ if __name__ == '__main__':
         load_checkpoint(folder=args.load_dir,
                         filename='checkpoint_best')
 
-    test_dataset = GoL_Sup_Dataset(types=args.data_type, split='Test')
+    test_dataset = GoL_Sup_Dataset(data_type=args.data_type, split='Test')
     test_loader = DataLoader(test_dataset, shuffle=False, batch_size=100)
 
     if args.mode == 'baseline':

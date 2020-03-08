@@ -26,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('out_dir', type=str, help='where to save checkpoints')
     parser.add_argument('data_type', type=str, help='random or pattern?')
     parser.add_argument('mode', type=str, help='what kind of model to run?')
+    parser.add_argument('--custom', action='store_false', help='Using custom features?')
     parser.add_argument('--batch_size', type=int, default=100,
                         help='batch size [default=100]')
     parser.add_argument('--lr', type=float, default=0.01,
@@ -46,23 +47,23 @@ if __name__ == '__main__':
     args.cuda = args.cuda and torch.cuda.is_available()
     device = torch.device('cuda' if args.cuda else 'cpu')
 
-    def train(mode='baseline'):
+    def train(args):
         # Define training dataset & build vocab
-        train_dataset = GoL_Sup_Dataset(types=args.data_type, split='Train')
+        train_dataset = GoL_Sup_Dataset(data_type=args.data_type, custom_features=args.custom, split='Train')
         train_loader = DataLoader(train_dataset, shuffle=True, batch_size=args.batch_size)
         N_mini_batches = len(train_loader)
 
         # Define test dataset
-        test_dataset = GoL_Sup_Dataset(types=args.data_type, split='Validation')
+        test_dataset = GoL_Sup_Dataset(data_type=args.data_type, custom_features=args.custom, split='Validation')
         test_loader = DataLoader(test_dataset, shuffle=False, batch_size=args.batch_size)
 
         # Define model & optimizer
-        if mode == 'baseline':
+        if args.mode == 'baseline':
             conv_pred = BaselineCNN(img_size = 30)
             optimizer = torch.optim.Adam(conv_pred.parameters(), lr=args.lr)
             conv_pred.to(device)
             models = [conv_pred]
-        elif mode == 'autoencoder':
+        elif args.mode == 'autoencoder':
             pattern_enc = PatternEncoder(img_size=30)
             pattern_dec = PatternDecoder(img_size=30)
             optimizer = torch.optim.Adam(
@@ -167,4 +168,4 @@ if __name__ == '__main__':
                 print('====> Test Epoch: {}\tLoss: {:.4f}'.format(epoch, loss_meter.avg))
         return loss_meter.avg
 
-train(args.mode)
+train(args)
